@@ -1,4 +1,4 @@
-import { memo } from "react"
+import { memo, useState } from "react"
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { Markdown } from "../markdown"
@@ -6,6 +6,7 @@ import { ToolCallCard } from "./ToolCallCard"
 import { ReasoningBlock } from "./ReasoningBlock"
 import type { Message, Part } from "../../lib/sdk"
 import { hasSelectableContent } from "../../lib/message-text"
+import * as Clipboard from "expo-clipboard"
 
 const SCREEN_WIDTH = Dimensions.get("window").width
 
@@ -40,6 +41,16 @@ export const MessageBubble = memo(
     const text = textParts.map((p) => p.text).join("\n") || ""
     const reasoning = reasoningParts.map((p) => p.text).join("\n") || ""
 
+    const [copied, setCopied] = useState(false)
+    const copyText = async () => {
+      if (!text) return
+      try {
+        await Clipboard.setStringAsync(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch {}
+    }
+
     return (
       <View
         style={[
@@ -65,8 +76,22 @@ export const MessageBubble = memo(
               here is a bubble-wide gesture: a long-press on the bubble competed
               with horizontal scrolling in code blocks and with text selection.
               Labels are explicitly non-selectable so a tap can't be swallowed. */}
-          {(onSelectText || onEdit) && (
+          {(onSelectText || onEdit || text.length > 0) && (
             <View style={s.actions}>
+              {text.length > 0 && (
+                <TouchableOpacity
+                  style={[s.selectChip, isDark && s.selectChipDark]}
+                  hitSlop={8}
+                  onPress={copyText}
+                  testID={`message-copy-${message.id}`}
+                >
+                  <Ionicons
+                    name={copied ? "checkmark" : "copy-outline"}
+                    size={14}
+                    color={copied ? "#22c55e" : isDark ? "#d4d4d4" : "#525252"}
+                  />
+                </TouchableOpacity>
+              )}
               {onSelectText && hasSelectableContent(parts) && (
                 <TouchableOpacity
                   style={[s.selectChip, isDark && s.selectChipDark]}
